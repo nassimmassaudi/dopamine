@@ -1,30 +1,38 @@
+# Specify the base image
 ARG base_image=dopamine/core
 FROM ${base_image}
 
-# Create Mujoco subdir.
-RUN mkdir /root/.mujoco
-COPY mjkey.txt /root/.mujoco/mjkey.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    libosmesa6-dev \
+    libgl1-mesa-glx \
+    libglfw3 \
+    libglew-dev \
+    patchelf \
+    gcc \
+    python3.8-dev \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Prerequisites
-RUN apt-get install \
-  libosmesa6-dev \
-  libgl1-mesa-glx \
-  libglfw3 \
-  libglew-dev \
-  patchelf \
-  gcc \
-  python3.8-dev \
-  unzip -y
+# Set working directory
+WORKDIR /root
 
-# Download and install mujoco.
-RUN wget https://www.roboti.us/download/mujoco200_linux.zip
-RUN unzip mujoco200_linux.zip
-RUN rm mujoco200_linux.zip
-RUN mv mujoco200_linux /root/.mujoco/mujoco200
+# Create .mujoco directory and copy the MuJoCo license key
+RUN mkdir .mujoco
+COPY mjkey.txt .mujoco/mjkey.txt
 
-# Add LD_LIBRARY_PATH environment variable.
-ENV LD_LIBRARY_PATH "/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}"
-RUN echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}' >> /etc/bash.bashrc
+# Download and install MuJoCo
+RUN curl -O https://www.roboti.us/download/mujoco200_linux.zip && \
+    unzip mujoco200_linux.zip && \
+    rm mujoco200_linux.zip && \
+    mv mujoco200_linux .mujoco/mujoco200
 
-# Finally, install mujoco_py.
+# Add LD_LIBRARY_PATH environment variable
+ENV LD_LIBRARY_PATH /root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}
+
+# Install mujoco_py
 RUN pip install mujoco_py
+
+# Reset working directory
+WORKDIR /
